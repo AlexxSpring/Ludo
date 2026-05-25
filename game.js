@@ -77,7 +77,12 @@ function rollDiceNumber() {
     return Math.floor(Math.random() * 6) + 1;
 }
 
-function rollDice() {
+function attemptDiceRoll() {
+    if (gameState.currentPlayer !== 'red') return; // Human can't roll for bot
+    executeDiceRoll();
+}
+
+function executeDiceRoll() {
     // Prevent rolling if the dice was already rolled this turn
     if (gameState.diceRolled) return; 
     
@@ -104,7 +109,7 @@ function rollDice() {
         diceElement.style.transform = 'scale(1) rotate(0deg)';
         diceElement.style.opacity = '1';
         
-        // Phase 3: Highlight valid moves and wait for user interaction
+        // Phase 3/4: Highlight valid moves or trigger bot
         setTimeout(() => {
             console.log(`${gameState.currentPlayer} rolled a ${gameState.diceValue}`);
             highlightValidMoves();
@@ -113,7 +118,7 @@ function rollDice() {
     }, gameState.animationDelayMs);
 }
 
-diceElement.addEventListener('click', rollDice);
+diceElement.addEventListener('click', attemptDiceRoll);
 
 // ==========================================================================
 // TURN MANAGEMENT
@@ -126,6 +131,11 @@ function switchTurn() {
     
     gameState.diceRolled = false; // Next player can now roll
     updateTurnUI();
+    
+    // Phase 4: Trigger AI Bot if it's not the human's turn
+    if (gameState.currentPlayer !== 'red') {
+        setTimeout(playComputerTurn, gameState.animationDelayMs);
+    }
 }
 
 function updateTurnUI() {
@@ -187,8 +197,12 @@ function initTokens() {
         for(let i = 0; i < 4; i++) {
             const token = document.createElement('div');
             token.className = `token token-${player}`;
-            // Touch interactions for accessibility
-            token.addEventListener('click', () => handleTokenClick(player, i));
+            // Phase 4: Touch interactions (Humans can only click red)
+            token.addEventListener('click', () => {
+                if (gameState.currentPlayer === 'red' && player === 'red') {
+                    handleTokenClick(player, i);
+                }
+            });
             tokenElements[player].push(token);
         }
     });
@@ -271,9 +285,15 @@ function highlightValidMoves() {
         return;
     }
     
-    validMoves.forEach(index => {
-        tokenElements[gameState.currentPlayer][index].classList.add('pulsing');
-    });
+    if (gameState.currentPlayer === 'red') {
+        // Human player visual cues
+        validMoves.forEach(index => {
+            tokenElements[gameState.currentPlayer][index].classList.add('pulsing');
+        });
+    } else {
+        // Phase 4: Bot decision time
+        setTimeout(() => makeBotDecision(validMoves), gameState.animationDelayMs);
+    }
 }
 
 function getValidMoves() {
@@ -309,13 +329,105 @@ function handleTokenClick(player, index) {
         gameState.tokens[player][index] += gameState.diceValue;
     }
     
+    // Phase 4: Capture Logic
+    const captured = checkCaptures(player, index);
+    
     renderTokens();
     gameState.diceRolled = false;
     
-    // Temporarily skip capture logic (Phase 4). Just switch turns unless a 6 was rolled.
-    if (gameState.diceValue !== 6) {
-        setTimeout(switchTurn, gameState.animationDelayMs);
-    } else {
+    // Bonus turn if 6 or capture
+    if (gameState.diceValue === 6 || captured) {
         updateTurnUI(); 
+        if (player !== 'red') {
+            setTimeout(playComputerTurn, gameState.animationDelayMs);
+        }
+    } else {
+        setTimeout(switchTurn, gameState.animationDelayMs);
     }
+}
+
+// ==========================================================================
+// PHASE 4: CAPTURE LOGIC & "FRIENDLY AI" BOT
+// ==========================================================================
+function getAbsolutePosition(player, state) {
+    if (state <= 0 || state > 52) return -1;
+    const playerOffsets = { 'red': 0, 'green': 13, 'yellow': 26, 'blue': 39 };
+    return (state - 1 + playerOffsets[player]) % 52;
+}
+
+function checkCaptures(player, tokenIndex) {
+    const state = gameState.tokens[player][tokenIndex];
+    if (state <= 0 || state > 52) return false;
+    
+    const absPos = getAbsolutePosition(player, state);
+    if (safeZones.includes(absPos)) return false; // Cannot capture on stars
+    
+    let captured = false;
+    gameState.players.forEach(opponent => {
+        if (opponent === player) return;
+        for (let i = 0; i < 4; i++) {
+            const oppState = gameState.tokens[opponent][i];
+            if (oppState > 0 && oppState <= 52 && getAbsolutePosition(opponent, oppState) === absPos) {
+                gameState.tokens[opponent][i] = 0; // Send back to base
+                captured = true;
+            }
+        }
+    });
+    return captured;
+}
+
+function playComputerTurn() {
+    if (gameState.isGameOver || gameState.currentPlayer === 'red') return;
+    executeDiceRoll(); // AI triggers the dice roll automatically
+}
+
+function makeBotDecision(validMoves) {
+    const player = gameState.currentPlayer;
+    const dice = gameState.diceValue;
+    let chosenIndex = validMoves[0]; 
+    
+    // 20% Randomness Factor: Forgiving Bot makes sub-optimal moves occasionally
+    if (Math.random() < 0.20) {
+        chosenIndex = validMoves[Math.floor(Math.random() * validMoves.length)];
+    } else {
+        let bestScore = -1;
+        validMoves.forEach(index => {
+            let score = 0;
+            const currentPos = gameState.tokens[player][index];
+            const nextPos = currentPos === 0 ? 1 : currentPos + dice;
+            
+            if (currentPos === 0) {
+                score += 50; // Priority: Get out of base
+            } else {
+                // Check for potential captures
+                if (nextPos <= 52) {
+                    const absPos = getAbsolutePosition(player, nextPos);
+                    if (!safeZones.includes(absPos)) {
+                        gameState.players.forEach(opp => {
+                            if (opp !== player) {
+                                for(let i=0; i<4; i++) {
+                                    const oppPos = gameState.tokens[opp][i];
+                                    if (oppPos > 0 && oppPos <= 52 && getAbsolutePosition(opp, oppPos) === absPos) {
+                                        score += 100; // Top Priority: Capture opponent
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                if (nextPos > 52 && currentPos <= 52) score += 80; // High Priority: Enter home stretch
+                if (nextPos === 57) score += 90; // High Priority: Finish token
+                if (currentPos > 0) score += currentPos; // Low Priority: Advance the furthest token
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                chosenIndex = index;
+            }
+        });
+    }
+    
+    // Execute the best (or randomly chosen) move
+    handleTokenClick(player, chosenIndex);
 }
