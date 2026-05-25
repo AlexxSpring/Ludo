@@ -46,24 +46,63 @@ const gameScreen = document.getElementById('game-screen');
 const indicator = document.querySelector('.active-player-indicator');
 
 // ==========================================================================
-// GAME INITIALIZATION
+// GAME INITIALIZATION & PHASE 5 STORAGE/WAKELOCK/AUDIO
 // ==========================================================================
-function initGame() {
-    // Hide splash screen, show game screen
-    splashScreen.classList.remove('active');
-    splashScreen.classList.add('hidden');
-    gameScreen.classList.remove('hidden');
-    gameScreen.classList.add('active');
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    if (type === 'roll') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'move') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'capture') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
+    }
+}
+
+let wakeLock = null;
+async function requestWakeLock() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } 
+    catch (err) { console.warn(`WakeLock error: ${err.message}`); }
+}
+document.addEventListener('visibilitychange', () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock();
+});
+
+function saveGame() { localStorage.setItem('naniLudoSave', JSON.stringify(gameState)); }
+function clearSave() { localStorage.removeItem('naniLudoSave'); }
+
+function initGame(resume = false) {
+    splashScreen.classList.remove('active'); splashScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden'); gameScreen.classList.add('active');
     
-    // Reset state for a fresh game
-    gameState.currentPlayer = 'red';
-    gameState.diceRolled = false;
+    if (resume) {
+        const saved = localStorage.getItem('naniLudoSave');
+        if (saved) Object.assign(gameState, JSON.parse(saved));
+    } else {
+        clearSave();
+        gameState.currentPlayer = 'red'; gameState.diceRolled = false;
+        gameState.tokens = { red: [0,0,0,0], green: [0,0,0,0], yellow: [0,0,0,0], blue: [0,0,0,0] };
+    }
     
-    initTokens(); // Phase 3: Initialize token DOM elements
+    requestWakeLock();
+    initTokens(); 
     updateTurnUI();
 }
 
-btnPlayComputer.addEventListener('click', initGame);
+btnPlayComputer.addEventListener('click', () => initGame(false));
+document.getElementById('btn-resume').addEventListener('click', () => initGame(true));
+if (localStorage.getItem('naniLudoSave')) document.getElementById('btn-resume').classList.remove('hidden');
 
 // ==========================================================================
 // DICE LOGIC & ANIMATIONS
@@ -85,6 +124,8 @@ function attemptDiceRoll() {
 function executeDiceRoll() {
     // Prevent rolling if the dice was already rolled this turn
     if (gameState.diceRolled) return; 
+    
+    playSound('roll'); // Phase 5: Audio Hook
     
     // Start visual rolling animation (accessibility: clear feedback)
     diceElement.style.transform = 'scale(0.8) rotate(360deg)';
@@ -131,6 +172,7 @@ function switchTurn() {
     
     gameState.diceRolled = false; // Next player can now roll
     updateTurnUI();
+    saveGame(); // Phase 5: Persist state
     
     // Phase 4: Trigger AI Bot if it's not the human's turn
     if (gameState.currentPlayer !== 'red') {
@@ -286,6 +328,14 @@ function highlightValidMoves() {
     }
     
     if (gameState.currentPlayer === 'red') {
+        // Phase 5: Auto-move execution if only 1 option
+        if (validMoves.length === 1) {
+            const idx = validMoves[0];
+            tokenElements['red'][idx].classList.add('pulsing');
+            setTimeout(() => handleTokenClick('red', idx), 600);
+            return;
+        }
+        
         // Human player visual cues
         validMoves.forEach(index => {
             tokenElements[gameState.currentPlayer][index].classList.add('pulsing');
@@ -332,8 +382,13 @@ function handleTokenClick(player, index) {
     // Phase 4: Capture Logic
     const captured = checkCaptures(player, index);
     
+    // Phase 5: Move/Capture Audio
+    if (captured) playSound('capture');
+    else playSound('move');
+    
     renderTokens();
     gameState.diceRolled = false;
+    saveGame(); // Phase 5: Persist state
     
     // Bonus turn if 6 or capture
     if (gameState.diceValue === 6 || captured) {

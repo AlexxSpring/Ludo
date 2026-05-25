@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- PWA / Web Manifest will go here in Phase 5 -->
+    <meta name="theme-color" content="#E60000">
+    <link rel="manifest" href="manifest.json">
     <title>Nani ji's Ludo</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -126,5 +127,12 @@
     </div>
     
     <script src="game.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
