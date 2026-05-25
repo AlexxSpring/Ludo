@@ -283,15 +283,50 @@ body {
     background-color: white;
     border: 4px solid var(--border-color);
     border-radius: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 4rem;
-    box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.15);
-    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex; justify-content: center; align-items: center; font-size: 4rem; box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.15);
 }
 
 .dice:active {
     transform: translateY(6px);
     box-shadow: 0 0px 0 rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.15);
 }
+
+/* ==========================================================================
+   PHASE 3: TOKENS & MOVEMENT PHYSICS
+   ========================================================================== */
+.token {
+    width: var(--token-size);
+    height: var(--token-size);
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+    position: relative;
+    z-index: 10;
+    transition: transform 0.3s ease, left 0.3s ease, top 0.3s ease, grid-column 0.3s ease, grid-row 0.3s ease;
+    cursor: pointer;
+    justify-self: center; /* Aligns token to center of CSS Grid cell */
+    align-self: center;
+}
+
+.token-red { background-color: var(--pure-red); }
+.token-green { background-color: var(--forest-green); }
+.token-yellow { background-color: var(--bright-yellow); }
+.token-blue { background-color: var(--deep-blue); }
+
+/* Cognitive Assistance: Pulsing valid moves */
+.token.pulsing {
+    animation: pulse 1s infinite alternate;
+    box-shadow: 0 0 15px currentColor;
+    z-index: 20;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.2); }
+}
+
+/* Multi-token rendering physics (offsets to avoid perfect overlap) */
+.token.offset-1 { transform: translate(-15%, -15%) scale(0.8); z-index: 11; }
+.token.offset-2 { transform: translate(15%, -15%) scale(0.8); z-index: 12; }
+.token.offset-3 { transform: translate(-15%, 15%) scale(0.8); z-index: 13; }
+.token.offset-4 { transform: translate(15%, 15%) scale(0.8); z-index: 14; }

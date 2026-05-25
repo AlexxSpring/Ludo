@@ -59,6 +59,7 @@ function initGame() {
     gameState.currentPlayer = 'red';
     gameState.diceRolled = false;
     
+    initTokens(); // Phase 3: Initialize token DOM elements
     updateTurnUI();
 }
 
@@ -103,17 +104,11 @@ function rollDice() {
         diceElement.style.transform = 'scale(1) rotate(0deg)';
         diceElement.style.opacity = '1';
         
-        // For Phase 2 ONLY: Automatically switch turns after a delay to test the engine.
-        // In Phase 3 & 4, this will happen AFTER token movement logic.
+        // Phase 3: Highlight valid moves and wait for user interaction
         setTimeout(() => {
             console.log(`${gameState.currentPlayer} rolled a ${gameState.diceValue}`);
-            // If they didn't roll a 6, switch turns. (6 gives another turn)
-            if (gameState.diceValue !== 6) {
-                switchTurn();
-            } else {
-                gameState.diceRolled = false; // Reset to allow rolling again
-            }
-        }, gameState.animationDelayMs * 2);
+            highlightValidMoves();
+        }, gameState.animationDelayMs);
         
     }, gameState.animationDelayMs);
 }
@@ -151,4 +146,176 @@ function updateTurnUI() {
     
     // Reset Dice face to generic cube
     diceElement.textContent = '🎲';
+}
+
+// ==========================================================================
+// PHASE 3: PATHFINDING, MOVEMENT PHYSICS & RENDERING
+// ==========================================================================
+
+// 1D Path mapped precisely to [col, row] on the 15x15 CSS Grid
+const pathCoordinates = [
+    [2, 7], [3, 7], [4, 7], [5, 7], [6, 7], // Red path
+    [7, 6], [7, 5], [7, 4], [7, 3], [7, 2], [7, 1], // Top left
+    [8, 1], [9, 1], // Top turn
+    [9, 2], [9, 3], [9, 4], [9, 5], [9, 6], // Top right (Green start at idx 13)
+    [10, 7], [11, 7], [12, 7], [13, 7], [14, 7], [15, 7], // Right top
+    [15, 8], [15, 9], // Right turn
+    [14, 9], [13, 9], [12, 9], [11, 9], [10, 9], // Right bottom (Yellow start at idx 26)
+    [9, 10], [9, 11], [9, 12], [9, 13], [9, 14], [9, 15], // Bottom right
+    [8, 15], [7, 15], // Bottom turn
+    [7, 14], [7, 13], [7, 12], [7, 11], [7, 10], // Bottom left (Blue start at idx 39)
+    [6, 9], [5, 9], [4, 9], [3, 9], [2, 9], [1, 9], // Left bottom
+    [1, 8], [1, 7] // Left turn
+];
+
+// 5-square Home Stretch for each color
+const homePaths = {
+    red:    [[2, 8], [3, 8], [4, 8], [5, 8], [6, 8]],
+    green:  [[8, 2], [8, 3], [8, 4], [8, 5], [8, 6]],
+    yellow: [[14, 8], [13, 8], [12, 8], [11, 8], [10, 8]],
+    blue:   [[8, 14], [8, 13], [8, 12], [8, 11], [8, 10]]
+};
+
+const safeZones = [0, 8, 13, 21, 26, 34, 39, 47]; // Indices of stars on main path
+const tokenElements = {};
+
+// Initialize DOM elements for tokens
+function initTokens() {
+    const board = document.getElementById('ludo-board');
+    gameState.players.forEach(player => {
+        tokenElements[player] = [];
+        for(let i = 0; i < 4; i++) {
+            const token = document.createElement('div');
+            token.className = `token token-${player}`;
+            // Touch interactions for accessibility
+            token.addEventListener('click', () => handleTokenClick(player, i));
+            tokenElements[player].push(token);
+        }
+    });
+    renderTokens();
+}
+
+// Master rendering function mapping State to DOM
+function renderTokens() {
+    const board = document.getElementById('ludo-board');
+    const cellOccupancy = {}; // Track overlapping tokens for physics offset
+    
+    gameState.players.forEach(player => {
+        for(let i = 0; i < 4; i++) {
+            const state = gameState.tokens[player][i];
+            const tokenEl = tokenElements[player][i];
+            
+            // Clean up old classes
+            tokenEl.className = `token token-${player}`;
+            tokenEl.style.display = 'block';
+            
+            if (state === 0) {
+                // In Base
+                const spot = document.querySelector(`.token-spot[data-base="${player}"][data-spot="${i+1}"]`);
+                if (spot && tokenEl.parentElement !== spot) {
+                    spot.innerHTML = '';
+                    spot.appendChild(tokenEl);
+                }
+                tokenEl.style.gridArea = 'auto'; 
+            } else if (state <= 52) {
+                // On the 1D Array Loop
+                if (tokenEl.parentElement !== board) board.appendChild(tokenEl);
+                
+                // Calculate absolute index offset for this specific color
+                const playerOffsets = { 'red': 0, 'green': 13, 'yellow': 26, 'blue': 39 };
+                let absoluteIndex = (state - 1 + playerOffsets[player]) % 52;
+                let [col, row] = pathCoordinates[absoluteIndex];
+                
+                tokenEl.style.gridColumn = col;
+                tokenEl.style.gridRow = row;
+                
+                // Register occupancy
+                const key = `${col},${row}`;
+                if (!cellOccupancy[key]) cellOccupancy[key] = [];
+                cellOccupancy[key].push(tokenEl);
+                
+            } else if (state <= 57) {
+                // Moving up the Home Stretch
+                if (tokenEl.parentElement !== board) board.appendChild(tokenEl);
+                let homeIndex = state - 53;
+                
+                if (homeIndex < 5) {
+                    let [col, row] = homePaths[player][homeIndex];
+                    tokenEl.style.gridColumn = col;
+                    tokenEl.style.gridRow = row;
+                } else {
+                    tokenEl.style.display = 'none'; // Token reached the center
+                }
+            }
+        }
+    });
+    
+    // Physics: Apply micro-offsets to overlapping tokens (Accessibility: so they don't hide each other)
+    for (const key in cellOccupancy) {
+        const tokensOnCell = cellOccupancy[key];
+        if (tokensOnCell.length > 1) {
+            tokensOnCell.forEach((tEl, idx) => {
+                tEl.classList.add(`offset-${(idx % 4) + 1}`);
+            });
+        }
+    }
+}
+
+// Cognitive Assistance: Find valid moves and highlight them
+function highlightValidMoves() {
+    const validMoves = getValidMoves();
+    
+    if (validMoves.length === 0) {
+        // No moves possible, skip turn
+        setTimeout(switchTurn, gameState.animationDelayMs);
+        return;
+    }
+    
+    validMoves.forEach(index => {
+        tokenElements[gameState.currentPlayer][index].classList.add('pulsing');
+    });
+}
+
+function getValidMoves() {
+    const validMoves = [];
+    const player = gameState.currentPlayer;
+    const dice = gameState.diceValue;
+    
+    for (let i = 0; i < 4; i++) {
+        const pos = gameState.tokens[player][i];
+        if (pos === 0) {
+            if (dice === 6) validMoves.push(i); // Need 6 to exit
+        } else if (pos + dice <= 57) {
+            validMoves.push(i); // Must not overshoot home
+        }
+    }
+    return validMoves;
+}
+
+function handleTokenClick(player, index) {
+    if (player !== gameState.currentPlayer || !gameState.diceRolled) return;
+    
+    const validMoves = getValidMoves();
+    if (!validMoves.includes(index)) return; // Invalid interaction
+    
+    // Clear pulsing classes immediately
+    validMoves.forEach(i => tokenElements[player][i].classList.remove('pulsing'));
+    
+    // Update State
+    const currentPos = gameState.tokens[player][index];
+    if (currentPos === 0) {
+        gameState.tokens[player][index] = 1;
+    } else {
+        gameState.tokens[player][index] += gameState.diceValue;
+    }
+    
+    renderTokens();
+    gameState.diceRolled = false;
+    
+    // Temporarily skip capture logic (Phase 4). Just switch turns unless a 6 was rolled.
+    if (gameState.diceValue !== 6) {
+        setTimeout(switchTurn, gameState.animationDelayMs);
+    } else {
+        updateTurnUI(); 
+    }
 }
