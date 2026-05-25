@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA / Web Manifest will go here in Phase 5 -->
+    <title>Nani ji's Ludo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen" class="screen active">
+        <div class="splash-content">
+            <h1>Nani ji's Ludo</h1>
+            <div class="button-container">
+                <button id="btn-play-computer" class="massive-btn primary-btn">Play vs Computer</button>
+                <button id="btn-resume" class="massive-btn secondary-btn hidden">Resume Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN GAME SCREEN -->
+    <div id="game-screen" class="screen hidden">
+        <div class="board-wrapper">
+            <div id="ludo-board" class="board">
+                <!-- TOP LEFT: RED BASE -->
+                <div class="base red-base">
+                    <div class="base-inner">
+                        <div class="token-spot" data-base="red" data-spot="1"></div>
+                        <div class="token-spot" data-base="red" data-spot="2"></div>
+                        <div class="token-spot" data-base="red" data-spot="3"></div>
+                        <div class="token-spot" data-base="red" data-spot="4"></div>
+                    </div>
+                </div>
+
+                <!-- TOP CENTER: TOP PATH (Green home column) -->
+                <div class="path top-path">
+                    <!-- Path cells will be injected via JS or hardcoded; 
+                         For layout, a 3x6 CSS Grid (18 cells) is used -->
+                    <!-- Hardcoding the 18 cells for pure HTML/CSS representation -->
+                    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell green-safe"></div><div class="cell green-home-path"></div>
+                    <div class="cell star"></div><div class="cell green-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell green-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell green-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell green-home-path"></div><div class="cell"></div>
+                </div>
+
+                <!-- TOP RIGHT: GREEN BASE -->
+                <div class="base green-base">
+                    <div class="base-inner">
+                        <div class="token-spot" data-base="green" data-spot="1"></div>
+                        <div class="token-spot" data-base="green" data-spot="2"></div>
+                        <div class="token-spot" data-base="green" data-spot="3"></div>
+                        <div class="token-spot" data-base="green" data-spot="4"></div>
+                    </div>
+                </div>
+
+                <!-- MIDDLE LEFT: LEFT PATH (Red home column) -->
+                <div class="path left-path">
+                    <!-- 6x3 Grid (18 cells) -->
+                    <div class="cell"></div><div class="cell red-safe"></div><div class="cell star"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell red-home-path"></div><div class="cell red-home-path"></div><div class="cell red-home-path"></div><div class="cell red-home-path"></div><div class="cell red-home-path"></div>
+                    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                </div>
+
+                <!-- CENTER: HOME -->
+                <div class="center-home">
+                    <div class="home-triangle red-triangle"></div>
+                    <div class="home-triangle green-triangle"></div>
+                    <div class="home-triangle yellow-triangle"></div>
+                    <div class="home-triangle blue-triangle"></div>
+                </div>
+
+                <!-- MIDDLE RIGHT: RIGHT PATH (Yellow home column) -->
+                <div class="path right-path">
+                    <!-- 6x3 Grid (18 cells) -->
+                    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                    <div class="cell yellow-home-path"></div><div class="cell yellow-home-path"></div><div class="cell yellow-home-path"></div><div class="cell yellow-home-path"></div><div class="cell yellow-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell star"></div><div class="cell yellow-safe"></div><div class="cell"></div>
+                </div>
+
+                <!-- BOTTOM LEFT: BLUE BASE -->
+                <div class="base blue-base">
+                    <div class="base-inner">
+                        <div class="token-spot" data-base="blue" data-spot="1"></div>
+                        <div class="token-spot" data-base="blue" data-spot="2"></div>
+                        <div class="token-spot" data-base="blue" data-spot="3"></div>
+                        <div class="token-spot" data-base="blue" data-spot="4"></div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM CENTER: BOTTOM PATH (Blue home column) -->
+                <div class="path bottom-path">
+                    <!-- 3x6 Grid (18 cells) -->
+                    <div class="cell"></div><div class="cell blue-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell blue-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell blue-home-path"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell blue-home-path"></div><div class="cell star"></div>
+                    <div class="cell blue-home-path"></div><div class="cell blue-safe"></div><div class="cell"></div>
+                    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                </div>
+
+                <!-- BOTTOM RIGHT: YELLOW BASE -->
+                <div class="base yellow-base">
+                    <div class="base-inner">
+                        <div class="token-spot" data-base="yellow" data-spot="1"></div>
+                        <div class="token-spot" data-base="yellow" data-spot="2"></div>
+                        <div class="token-spot" data-base="yellow" data-spot="3"></div>
+                        <div class="token-spot" data-base="yellow" data-spot="4"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CONTROLS / DICE AREA -->
+            <div class="controls-area">
+                <div class="active-player-indicator">
+                    <span id="player-turn-text">Your Turn</span>
+                </div>
+                <div class="dice-container" id="dice-container">
+                    <!-- The dice is huge for accessibility -->
+                    <div class="dice" id="main-dice">🎲</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

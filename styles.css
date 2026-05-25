@@ -1,0 +1,297 @@
+/* ==========================================================================
+   NANI JI'S LUDO - STYLESHEET (PHASE 1)
+   Accessibility First: High Contrast, Large Targets, Responsive (vh/vw)
+   ========================================================================== */
+
+   :root {
+    /* Classic, High-Contrast Ludo Colors */
+    --pure-red: #E60000;
+    --forest-green: #008000;
+    --bright-yellow: #FFD700;
+    --deep-blue: #0000B3;
+    
+    /* UI Colors */
+    --bg-color: #F0F4F8; /* Soft background to reduce eye strain */
+    --border-color: #1A1A1A; /* Strong borders for clear definition */
+    --cell-bg: #FFFFFF;
+    
+    /* Touch Target & Sizing Variables */
+    --board-size: 96vmin; /* 96% of the smallest viewport dimension ensures it always fits */
+    --cell-size: calc(var(--board-size) / 15);
+    
+    /* Token & Dice Sizing */
+    --token-size: calc(var(--cell-size) * 0.8);
+    --dice-size: 100px;
+}
+
+/* ==========================================================================
+   RESET & BASE STYLES
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight for cleaner UI */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--border-color);
+    overflow: hidden; /* Prevent scrolling, app-like feel */
+    user-select: none; /* Prevent accidental text selection */
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+.hidden {
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.active {
+    display: flex !important;
+    opacity: 1;
+}
+
+/* ==========================================================================
+   SPLASH SCREEN
+   ========================================================================== */
+.splash-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.splash-content h1 {
+    font-size: 3rem;
+    margin-bottom: 3rem;
+    color: var(--border-color);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.massive-btn {
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 1.5rem 2rem;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    min-height: 80px; /* Minimum accessible touch target */
+}
+
+.massive-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0 rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.primary-btn {
+    background-color: var(--forest-green);
+    color: white;
+}
+
+.secondary-btn {
+    background-color: var(--bright-yellow);
+    color: var(--border-color);
+}
+
+/* ==========================================================================
+   GAME BOARD LAYOUT (15x15 Conceptual Grid split into semantic areas)
+   ========================================================================== */
+.board-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding-top: 2vh;
+}
+
+.board {
+    width: var(--board-size);
+    height: var(--board-size);
+    background-color: var(--border-color); /* Acts as border color through gaps */
+    display: grid;
+    /* 15x15 Grid Definition */
+    grid-template-columns: repeat(15, 1fr);
+    grid-template-rows: repeat(15, 1fr);
+    gap: 2px; /* Grid lines */
+    border: 4px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* Base Areas (6x6 each) */
+.base {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.red-base { grid-area: 1 / 1 / 7 / 7; background-color: var(--pure-red); }
+.green-base { grid-area: 1 / 10 / 7 / 16; background-color: var(--forest-green); }
+.blue-base { grid-area: 10 / 1 / 16 / 7; background-color: var(--deep-blue); }
+.yellow-base { grid-area: 10 / 10 / 16 / 16; background-color: var(--bright-yellow); }
+
+.base-inner {
+    width: 60%;
+    height: 60%;
+    background-color: var(--cell-bg);
+    border-radius: 12%;
+    padding: 10%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 15%;
+}
+
+.token-spot {
+    background-color: rgba(0,0,0,0.05);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+}
+
+/* Path Areas */
+.path {
+    background-color: var(--cell-bg);
+    display: grid;
+    gap: 2px;
+}
+.path .cell {
+    background-color: var(--cell-bg);
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.top-path { grid-area: 1 / 7 / 7 / 10; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(6, 1fr); background-color: var(--border-color); }
+.bottom-path { grid-area: 10 / 7 / 16 / 10; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(6, 1fr); background-color: var(--border-color); }
+.left-path { grid-area: 7 / 1 / 10 / 7; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); background-color: var(--border-color); }
+.right-path { grid-area: 7 / 10 / 10 / 16; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); background-color: var(--border-color); }
+
+/* Home Path Colors */
+.red-home-path { background-color: var(--pure-red) !important; opacity: 0.8; }
+.green-home-path { background-color: var(--forest-green) !important; opacity: 0.8; }
+.blue-home-path { background-color: var(--deep-blue) !important; opacity: 0.8; }
+.yellow-home-path { background-color: var(--bright-yellow) !important; opacity: 0.8; }
+
+/* Safe Starting Spots */
+.red-safe { background-color: var(--pure-red) !important; }
+.green-safe { background-color: var(--forest-green) !important; }
+.blue-safe { background-color: var(--deep-blue) !important; }
+.yellow-safe { background-color: var(--bright-yellow) !important; }
+
+/* Safe Stars */
+.star::after {
+    content: '★';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: calc(var(--cell-size) * 0.5);
+    color: var(--safe-star-color);
+}
+
+/* Center Home */
+.center-home {
+    grid-area: 7 / 7 / 10 / 10;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--cell-bg);
+}
+/* Triangles for the center home using CSS borders */
+.home-triangle {
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+.red-triangle {
+    top: 0; left: 0;
+    border-top: calc(var(--cell-size) * 1.5) solid transparent;
+    border-bottom: calc(var(--cell-size) * 1.5) solid transparent;
+    border-left: calc(var(--cell-size) * 1.5) solid var(--pure-red);
+}
+.green-triangle {
+    top: 0; left: 0;
+    border-left: calc(var(--cell-size) * 1.5) solid transparent;
+    border-right: calc(var(--cell-size) * 1.5) solid transparent;
+    border-top: calc(var(--cell-size) * 1.5) solid var(--forest-green);
+}
+.yellow-triangle {
+    top: 0; right: 0;
+    border-top: calc(var(--cell-size) * 1.5) solid transparent;
+    border-bottom: calc(var(--cell-size) * 1.5) solid transparent;
+    border-right: calc(var(--cell-size) * 1.5) solid var(--bright-yellow);
+}
+.blue-triangle {
+    bottom: 0; left: 0;
+    border-left: calc(var(--cell-size) * 1.5) solid transparent;
+    border-right: calc(var(--cell-size) * 1.5) solid transparent;
+    border-bottom: calc(var(--cell-size) * 1.5) solid var(--deep-blue);
+}
+
+/* ==========================================================================
+   CONTROLS & DICE
+   ========================================================================== */
+.controls-area {
+    margin-top: 3vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.active-player-indicator {
+    background-color: var(--pure-red); /* Will change dynamically */
+    color: white;
+    padding: 0.5rem 2rem;
+    border-radius: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.dice-container {
+    cursor: pointer;
+}
+
+.dice {
+    width: var(--dice-size);
+    height: var(--dice-size);
+    background-color: white;
+    border: 4px solid var(--border-color);
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4rem;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.15);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.dice:active {
+    transform: translateY(6px);
+    box-shadow: 0 0px 0 rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.15);
+}
