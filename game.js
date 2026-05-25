@@ -183,14 +183,14 @@ function switchTurn() {
 function updateTurnUI() {
     // Map players to CSS color variables
     const colors = {
-        'red': 'var(--pure-red)',
-        'green': 'var(--forest-green)',
-        'yellow': 'var(--bright-yellow)',
-        'blue': 'var(--deep-blue)'
+        'red': 'var(--pure-red-grad)',
+        'green': 'var(--forest-green-grad)',
+        'yellow': 'var(--bright-yellow-grad)',
+        'blue': 'var(--deep-blue-grad)'
     };
     
     // Update the top indicator
-    indicator.style.backgroundColor = colors[gameState.currentPlayer];
+    indicator.style.background = colors[gameState.currentPlayer];
     
     // Format name (e.g. "red" -> "Red's Turn")
     const playerCapitalized = gameState.currentPlayer.charAt(0).toUpperCase() + gameState.currentPlayer.slice(1);
